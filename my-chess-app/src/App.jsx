@@ -3,7 +3,133 @@ import {
   Chessboard } from 'react-chessboard';
 import { Chess } from 'chess.js';
 import { io } from 'socket.io-client';
-import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card"
+// Authentication Component
+const AuthPage = ({ onLogin, onRegister }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false); // New state for registration
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('http://localhost:8000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onLogin(data); // Set user state and redirect
+      } else {
+        console.error('Login failed:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    // Send registration request to backend
+    try {
+      const response = await fetch('http://localhost:8000/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }), // Send username and password
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        onLogin(data); // Update user state with response data
+        setIsRegistering(false); // Close registration form after successful registration
+      } else {
+        console.error('Registration failed:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error during registration:', error);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="p-8 bg-white rounded-xl shadow-md">
+        <h2 className="text-2xl font-bold mb-6">{isRegistering ? 'Register' : 'Chess Masters Login'}</h2>
+        <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
+          <input 
+            type="text" 
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Username"
+            className="w-full p-2 border rounded"
+            required
+          />
+          <input 
+            type="password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            className="w-full p-2 border rounded"
+            required
+          />
+          <button 
+            type="submit" 
+            className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          >
+            {isRegistering ? 'Register' : 'Login'}
+          </button>
+        </form>
+        <button 
+          onClick={() => setIsRegistering(!isRegistering)} 
+          className="mt-4 text-blue-600 hover:underline"
+        >
+          {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Game Modes Selection Component
+const GameModeSelector = ({ onSelectMode }) => {
+  const gameModes = [
+    { 
+      name: 'Play Online', 
+      description: 'Match with random players worldwide',
+      icon: '🌐'
+    },
+    { 
+      name: 'Play vs Bot', 
+      description: 'Challenge AI at different difficulty levels',
+      icon: '🤖'
+    },
+    { 
+      name: 'Practice', 
+      description: 'Learn and improve your skills',
+      icon: '📚'
+    }
+  ];
+
+  return (
+    <div className="grid grid-cols-3 gap-4 p-6">
+      {gameModes.map((mode) => (
+        <div 
+          key={mode.name}
+          onClick={() => onSelectMode(mode.name)}
+          className="bg-white border rounded-lg p-4 cursor-pointer hover:shadow-lg transition"
+        >
+          <div className="text-4xl mb-2">{mode.icon}</div>
+          <h3 className="font-bold">{mode.name}</h3>
+          <p className="text-sm text-gray-600">{mode.description}</p>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 // Main Chess Game Component
 const ChessGame = ({ gameMode, user }) => {
@@ -81,187 +207,29 @@ const ChessGame = ({ gameMode, user }) => {
   );
 };
 
-// Authentication Component
-const AuthPage = ({ onLogin }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    onLogin({ username });
-  };
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-96 p-8 bg-white rounded-xl shadow-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Chess Login</h2>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input 
-            type="text" 
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            className="w-full p-2 border rounded"
-            required
-          />
-          <input 
-            type="password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full p-2 border rounded"
-            required
-          />
-          <button 
-            type="submit" 
-            className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
-          >
-            Login
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// Game Modes Selection Component
-const GameModeSelector = ({ onSelectMode }) => {
-  const gameModes = [
-    { 
-      name: 'Play vs Bot', 
-      description: 'Challenge AI at different difficulty levels',
-      icon: '🤖'
-    },
-    { 
-      name: 'Local Multiplayer', 
-      description: 'Play with a friend on the same device',
-      icon: '👥'
-    }
-  ];
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-6">
-      <div className="grid grid-cols-2 gap-4">
-        {gameModes.map((mode) => (
-          <div 
-            key={mode.name}
-            onClick={() => onSelectMode(mode.name)}
-            className="bg-white border rounded-lg p-4 cursor-pointer hover:shadow-lg transition text-center"
-          >
-            <div className="text-4xl mb-2 flex justify-center">{mode.icon}</div>
-            <h3 className="font-bold">{mode.name}</h3>
-            <p className="text-sm text-gray-600">{mode.description}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Main Chess Game Component
-const ChessBoard = ({ gameMode, user }) => {
-  const [game, setGame] = useState(new ChessGame());
-  const [selectedSquare, setSelectedSquare] = useState(null);
-
-  const renderPiece = (piece) => {
-    const pieceIcons = {
-      'wp': '♙', 'wr': '♖', 'wn': '♘', 'wb': '♗', 'wq': '♕', 'wk': '♔',
-      'bp': '♟', 'br': '♜', 'bn': '♞', 'bb': '♝', 'bq': '♛', 'bk': '♚'
-    };
-    return pieceIcons[piece] || null;
-  };
-
-  const handleSquareClick = (row, col) => {
-    if (selectedSquare) {
-      // Attempt to move the piece
-      const success = game.movePiece(
-        selectedSquare.row, 
-        selectedSquare.col, 
-        row, 
-        col
-      );
-      
-      if (success) {
-        // Simple bot logic for 'Play vs Bot' mode
-        if (gameMode === 'Play vs Bot') {
-          // Very basic random move generation for the bot
-          const availableMoves = [];
-          game.board.forEach((rowData, rowIndex) => {
-            rowData.forEach((piece, colIndex) => {
-              if (piece && piece.startsWith('b')) {
-                for (let toRow = 0; toRow < 8; toRow++) {
-                  for (let toCol = 0; toCol < 8; toCol++) {
-                    if (game.isValidMove(rowIndex, colIndex, toRow, toCol)) {
-                      availableMoves.push({ 
-                        fromRow: rowIndex, 
-                        fromCol: colIndex, 
-                        toRow, 
-                        toCol 
-                      });
-                    }
-                  }
-                }
-              }
-            });
-          });
-
-          if (availableMoves.length > 0) {
-            const randomMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
-            game.movePiece(
-              randomMove.fromRow, 
-              randomMove.fromCol, 
-              randomMove.toRow, 
-              randomMove.toCol
-            );
-          }
-        }
-
-        setSelectedSquare(null);
-        setGame(new ChessGame());
-      }
-    } else {
-      // Select a piece
-      const piece = game.board[row][col];
-      if (piece && piece.startsWith('w')) {
-        setSelectedSquare({ row, col });
-      }
-    }
-  };
-
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <Card className="w-[600px]">
-        <CardHeader>
-          <CardTitle className="text-center">{gameMode}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex justify-center">
-          <div className="grid grid-cols-8 gap-0 border-2 border-gray-300">
-            {game.board.map((row, rowIndex) => (
-              row.map((piece, colIndex) => (
-                <div 
-                  key={`${rowIndex}-${colIndex}`}
-                  onClick={() => handleSquareClick(rowIndex, colIndex)}
-                  className={`
-                    w-[75px] h-[75px] flex items-center justify-center text-5xl cursor-pointer
-                    ${(rowIndex + colIndex) % 2 === 0 ? 'bg-white' : 'bg-gray-200'}
-                    ${selectedSquare && 
-                      selectedSquare.row === rowIndex && 
-                      selectedSquare.col === colIndex 
-                      ? 'bg-yellow-200' : ''}
-                  `}
-                >
-                  {renderPiece(piece)}
-                </div>
-              ))
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
 // Main App Component
+// const ChessApp = () => {
+//   const [user, setUser] = useState(null);
+//   const [gameMode, setGameMode] = useState(null);
+
+//   useEffect(() => {
+//     fetch('http://localhost:8000/')
+//       .then(response => response.text()) // or response.json() if you're returning JSON
+//       .then(data => console.log(data))
+//       .catch(error => console.log('Error:', error));
+//   }, []);
+
+//   if (!user) {
+//     return <AuthPage onLogin={setUser} />;
+//   }
+
+//   if (!gameMode) {
+//     return <GameModeSelector onSelectMode={setGameMode} />;
+//   }
+
+//   return <ChessGame gameMode={gameMode} user={user} />;
+// };
+
 const ChessApp = () => {
   const [user, setUser] = useState(null);
   const [gameMode, setGameMode] = useState(null);
@@ -274,7 +242,44 @@ const ChessApp = () => {
     return <GameModeSelector onSelectMode={setGameMode} />;
   }
 
-  return <ChessBoard gameMode={gameMode} user={user} />;
+  return <ChessGame gameMode={gameMode} user={user} />;
 };
 
 export default ChessApp;
+
+// import React, { useState, useEffect } from 'react';
+// import { getUser } from './api';
+// import AuthPage from './components/AuthPage.jsx';
+// import GameModeSelector from './components/GameModeSelector.jsx';
+// import ChessGame from './components/ChessGame.jsx';
+
+// const App = () => {
+//   const [user, setUser] = useState(null);
+//   const [gameMode, setGameMode] = useState(null);
+
+//   useEffect(() => {
+//     if (user) {
+//       fetch(`http://localhost:8000/api/users/${user.username}`)
+//         .then((response) => response.json())
+//         .then((data) => {
+//           console.log('Fetched user data:', data);
+//           setUser(data); // Update the state with fetched user data
+//         })
+//         .catch((error) => {
+//           console.error('Error fetching user:', error);
+//         });
+//     }
+//   }, [user]); // Runs every time the user changes
+
+//   if (!user) {
+//     return <AuthPage onLogin={setUser} />;
+//   }
+
+//   if (!gameMode) {
+//     return <GameModeSelector onSelectMode={setGameMode} />;
+//   }
+
+//   return <ChessGame user={user} gameMode={gameMode} />;
+// };
+
+// export default App;
